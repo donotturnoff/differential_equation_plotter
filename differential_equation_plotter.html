@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html>
+ <head>
+  <title>Numerical solutions</title>
+  <script>
+var canvas, ctx, cw, ch;
+
+var x0, dx, x, prevX, xMax, xZoom, yZoom;
+var initd = new Array();
+var d = new Array();
+var prev = new Array();
+
+const gridSpacing = 1;
+
+function paint() {
+	ctx.beginPath();
+	
+	ctx.setLineDash([]);
+	ctx.strokeStyle = "red";
+	
+	ctx.moveTo(cw/2 + prevX*xZoom, ch/2 - prev[0]*yZoom);
+	ctx.lineTo(cw/2 + x*xZoom, ch/2 - d[0]*yZoom);
+	
+	ctx.stroke();
+}
+
+function paintGrid() {
+	ctx.beginPath();
+	
+	ctx.setLineDash([5, 2]);
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = "gray";
+	
+	for (var i = 0; i < cw/2*xZoom; i+=gridSpacing*xZoom) {
+		ctx.moveTo(cw/2-i, 0);
+		ctx.lineTo(cw/2-i, ch);
+	}
+	for (var i = 0; i < cw/2*xZoom; i+=gridSpacing*xZoom) {
+		ctx.moveTo(cw/2+i, 0);
+		ctx.lineTo(cw/2+i, ch);
+		console.log(i);
+	}
+	for (var i = 0; i < ch/2*yZoom; i+=gridSpacing*yZoom) {
+		ctx.moveTo(0, ch/2-i);
+		ctx.lineTo(cw, ch/2-i);
+	}
+	for (var i = 0; i < ch/2*yZoom; i+=gridSpacing*yZoom) {
+		ctx.moveTo(0, ch/2+i);
+		ctx.lineTo(cw, ch/2+i);
+	}
+	
+	ctx.stroke();
+	ctx.beginPath();
+	
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "black";
+	
+	ctx.moveTo(0, ch/2);
+	ctx.lineTo(cw, ch/2);
+	ctx.moveTo(cw/2, 0);
+	ctx.lineTo(cw/2, ch);
+	
+	ctx.stroke();
+}
+
+function update() {
+	ctx.clearRect(0, 0, cw, ch);
+	paintGrid()
+	
+	x = x0;
+	d = initd.slice(0);
+	
+	while (x < cw/2) {
+		prevX = x;
+		prev = d.slice(0);
+		
+		d[2] = 1/Math.pow(Math.cos(x), 3)-d[0];
+		d[1] = dx*d[2] + d[1];
+		d[0] = dx*d[1] + d[0];
+		
+		x += dx;
+		
+		paint();
+	}
+	
+	x = x0;
+	d = initd.slice(0);
+	
+	while (x > -cw/2) {
+		prevX = x;
+		prev = d.slice(0);
+		
+		d[2] = 1/Math.pow(Math.cos(x), 3)-d[0];
+		d[1] = -dx*d[2] + d[1];
+		d[0] = -dx*d[1] + d[0];
+		
+		x -= dx;
+		
+		paint();
+	}
+}
+
+function setParams() {
+	x0 = parseFloat(document.getElementById("x0").value);
+	dx = parseFloat(document.getElementById("dx").value);
+	xMax = parseFloat(document.getElementById("xMax").value);
+	xZoom = parseFloat(document.getElementById("xZoom").value);
+	yZoom = parseFloat(document.getElementById("yZoom").value);
+	
+	initd = new Array();
+	
+	for (var i = 0; i < document.getElementById("derivatives").children.length; i++) {
+		initd[i] = parseFloat(document.getElementById("d" + i).value);
+	}
+	update();
+}
+
+function updateDerivativeEntries() {
+	var entryList = document.getElementById("derivatives");
+	while (true) {
+		if (entryList.lastChild.id != "d0Item") {
+			entryList.removeChild(entryList.lastChild);
+		}
+		else {
+			break;
+		}
+	}
+
+	for (var i = 1; i < parseInt(document.getElementById("derivativeCount").value) + 1; i++) {
+		var listItem = document.createElement("li");
+		var label = document.createElement("label");
+		var entry = document.createElement("input");
+		
+		listItem.id = "d" + i + "Item"
+		label.innerHTML = "d<sup>" + i + "</sup>y &frasl; dx<sup>" + i + "</sup>";
+		entry.type = "number";
+		entry.id = "d" + i;
+		entry.step = "0.0001";
+		if (initd[i] != undefined) {
+			entry.value = initd[i];
+		}
+		else {
+			entry.value = "0";
+		}
+		entry.onchange = function() {setParams()};
+		
+		listItem.appendChild(label);
+		listItem.appendChild(entry);
+		entryList.appendChild(listItem);
+	}
+	setParams();
+}
+
+function init() {
+	canvas = document.getElementById("cvs");
+	ctx = canvas.getContext("2d");
+	cw = canvas.width;
+	ch = canvas.height;
+	
+	params.style.position = "absolute";
+	params.style.top = "10px";
+	params.style.left = (cw+10)+"px";
+	
+	ctx.lineJoin = "round";
+	ctx.lineWidth = 2;
+	updateDerivativeEntries();
+}
+document.addEventListener("DOMContentLoaded", init, false);
+  </script>
+ </head>
+ <body>
+  <form id="params"> 
+   <ul>
+    <li>
+     <label>x<sub>0</sub></label>
+     <input type="number" id="x0" step="0.0001" value="0" onchange="setParams()" />
+    </li>
+    <li>
+	 <label>dx</label>
+     <input type="number" id="dx" min="0.0001" max="1" step="0.0001" value="0.01" onchange="setParams()" />
+    </li>
+    <li>
+	 <label>x<sub>max</sub></label>
+     <input type="number" id="xMax" min="0.0001" max="1000" step="0.0001" value="100" onchange="setParams()" />
+    </li>
+    <li>
+     <label>x zoom</label>
+     <!--<input type="range" id="xZoom" min="1" max="1000" step="0.01" value="10" style="width:400px" onchange="setParams()" />-->
+     <input type="number" id="xZoom" min="1" max="1000" step="0.01" value="10" style="width:400px" onchange="setParams()" />
+    </li>
+    <li>
+     <label>y zoom</label>
+     <!--<input type="range" id="yZoom" min="1" max="1000" step="0.01" value="10" style="width:400px" onchange="setParams()" />-->
+     <input type="number" id="yZoom" min="1" max="1000" step="0.01" value="10" style="width:400px" onchange="setParams()" />
+    </li>
+    <li>
+     <label>Amount of derivatives required</label>
+     <input type="number" id="derivativeCount" min="0" max="10" step="1" value="1" onchange="updateDerivativeEntries()" />
+     <br />
+     <label>Initial values</label>
+     <ul id="derivatives">
+      <li id="d0Item">
+	   <label>y</label>
+       <input type="number" id="d0" step="0.0001" value="1" onchange="setParams()" />
+      </li>
+     </ul>
+    </li>
+   </ul>
+  </form>
+  <canvas id="cvs" width="750px" height="750px"></canvas>
+ </body>
+</html>
